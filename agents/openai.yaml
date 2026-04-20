@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video Download"
+  short_description: "Download 720p+ videos with ffmpeg merge"
+  default_prompt: "Use $video-download to download this video in the best 720p-or-higher quality up to 1080p."
