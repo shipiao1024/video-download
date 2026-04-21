@@ -13,6 +13,30 @@ This skill focuses on:
 
 The skill definition lives in [SKILL.md](./SKILL.md).
 
+## Quick Start
+
+Use PowerShell on Windows.
+
+1. Install Python dependencies:
+   ```powershell
+   python -m pip install -U yt-dlp argostranslate
+   ```
+2. Prepare `ffmpeg`:
+   - If `ffmpeg` is already on `PATH`, verify it with `ffmpeg -version`.
+   - Otherwise download a static build and remember the `bin` directory path.
+3. Confirm the user's same-resolution preference before downloading:
+   - `highest-bitrate`: larger files, less compressed source
+   - `efficient`: smaller files, prefer more efficient codecs when available
+4. Download one video:
+   ```powershell
+   python C:\Users\Administrator\.codex\skills\video-download\scripts\download_youtube_hd.py "YOUTUBE_URL" --video-preference highest-bitrate --ffmpeg-location "C:\path\to\ffmpeg\bin" -o "D:\youtube download"
+   ```
+5. If subtitles are needed, download English subtitles first, translate locally, then mux:
+   ```powershell
+   python C:\Users\Administrator\.codex\skills\video-download\scripts\translate_srt_argos.py "D:\youtube download\OUTPUT_DIR" --overwrite
+   python C:\Users\Administrator\.codex\skills\video-download\scripts\mux_subtitles.py "D:\youtube download\OUTPUT_DIR" --ffmpeg "C:\path\to\ffmpeg.exe" --overwrite
+   ```
+
 ## Repository Layout
 
 - [SKILL.md](./SKILL.md): Codex skill instructions
@@ -53,15 +77,17 @@ ffprobe -version
 If not, download a Windows static build and pass it explicitly:
 
 ```powershell
-curl.exe -L "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -o "TOOLS_DIR\ffmpeg-release-essentials.zip"
-Expand-Archive -LiteralPath "TOOLS_DIR\ffmpeg-release-essentials.zip" -DestinationPath "TOOLS_DIR\ffmpeg" -Force
+$toolsDir = "C:\tools"
+New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
+curl.exe -L "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -o "$toolsDir\ffmpeg-release-essentials.zip"
+Expand-Archive -LiteralPath "$toolsDir\ffmpeg-release-essentials.zip" -DestinationPath "$toolsDir\ffmpeg" -Force
 ```
 
 Then use:
 
 ```powershell
---ffmpeg-location "TOOLS_DIR\ffmpeg\ffmpeg-<version>-essentials_build\bin"
---ffmpeg "TOOLS_DIR\ffmpeg\ffmpeg-<version>-essentials_build\bin\ffmpeg.exe"
+--ffmpeg-location "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin"
+--ffmpeg "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin\ffmpeg.exe"
 ```
 
 ### 4. Local subtitle translation
@@ -84,6 +110,16 @@ Verify it:
 python -c "import argostranslate.translate as t; print(t.translate('Hello world', 'en', 'zh'))"
 ```
 
+### 5. Recommended verification
+
+Before first use, verify the three hard dependencies:
+
+```powershell
+python -m yt_dlp --version
+ffmpeg -version
+python -c "import argostranslate.translate as t; print(t.translate('test', 'en', 'zh'))"
+```
+
 ## Core Rules
 
 - Download only one video stream.
@@ -95,6 +131,50 @@ python -c "import argostranslate.translate as t; print(t.translate('Hello world'
   - `efficient`
 - For subtitle workflows, prefer downloading `en-GB` first, then translate locally.
 - Avoid requesting many subtitle languages in one batch because YouTube often returns `HTTP 429`.
+
+## End-to-End Example
+
+### 1. Inspect formats first
+
+```powershell
+python C:\Users\Administrator\.codex\skills\video-download\scripts\download_youtube_hd.py "https://www.youtube.com/watch?v=VIDEO_ID" --list-only --video-preference ask --ffmpeg-location "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin"
+```
+
+### 2. Download the final video
+
+Quality-first:
+
+```powershell
+python C:\Users\Administrator\.codex\skills\video-download\scripts\download_youtube_hd.py "https://www.youtube.com/watch?v=VIDEO_ID" --video-preference highest-bitrate --ffmpeg-location "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin" -o "D:\youtube download"
+```
+
+Storage-first:
+
+```powershell
+python C:\Users\Administrator\.codex\skills\video-download\scripts\download_youtube_hd.py "https://www.youtube.com/watch?v=VIDEO_ID" --video-preference efficient --ffmpeg-location "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin" -o "D:\youtube download"
+```
+
+### 3. Download English subtitles separately
+
+```powershell
+python -m yt_dlp --skip-download --write-subs --sub-langs "en-GB" --sub-format "srt" --sleep-interval 25 --max-sleep-interval 40 -P "D:\youtube download" -o "%(playlist_index)02d - %(title).200B [%(id)s].%(ext)s" "https://www.youtube.com/watch?v=VIDEO_ID"
+```
+
+### 4. Translate and mux
+
+```powershell
+python C:\Users\Administrator\.codex\skills\video-download\scripts\translate_srt_argos.py "D:\youtube download" --overwrite
+python C:\Users\Administrator\.codex\skills\video-download\scripts\mux_subtitles.py "D:\youtube download" --ffmpeg "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin\ffmpeg.exe" --overwrite
+```
+
+### 5. Expected output
+
+After a successful run, the directory normally contains:
+
+- original merged video file such as `.mp4` or `.mkv`
+- original English subtitle file such as `.en-GB.srt`
+- local Chinese subtitle file such as `.zh-Hans.local.srt`
+- final subtitle-muxed file under `with-subs\*.mkv`
 
 ## Common Commands
 
@@ -147,12 +227,45 @@ The muxing workflow:
 - sets English as the secondary subtitle track
 - does not re-encode video or audio
 
+## Bitrate Preference
+
+The same `1080p` label can point to very different streams. Resolution only tells you the pixel dimensions, not the compression level.
+
+- `highest-bitrate`
+  - use when the user wants the least compressed source within the chosen resolution
+  - tends to create much larger files
+  - often prefers AVC or another less efficient stream when it preserves more bits
+- `efficient`
+  - use when the user wants a smaller file at the same resolution
+  - tends to prefer newer codecs such as AV1 when available
+  - file size can be much smaller even though the video is still `1080p`
+
+This is why two downloaded `1080p` files can differ a lot in size.
+
 ## Tests
 
 ```powershell
 python .\scripts\test_download_youtube_hd.py
 python .\scripts\test_subtitle_workflow.py
 ```
+
+## Troubleshooting
+
+### Two `1080p` files have very different sizes
+
+That is normal. They may use different codecs, bitrates, frame rates, or compression profiles. The workflow now forces a user choice between `highest-bitrate` and `efficient` so this tradeoff is explicit.
+
+### Why English subtitles first instead of direct Chinese subtitles
+
+Direct translated subtitle fetching from YouTube is much more likely to hit throttling, especially in playlists. Pulling one English subtitle track first and translating locally is slower but more stable.
+
+### Can subtitles be integrated into the video file
+
+Yes. `scripts/mux_subtitles.py` creates a new `.mkv` file with soft subtitles. Video and audio are copied without re-encoding.
+
+### Why no silent default for bitrate preference
+
+Because `1080p` alone is not enough to decide the correct stream. For the same resolution, users may want either better source quality or smaller output size. The workflow must ask or require an explicit flag.
 
 ## Branch Naming
 
