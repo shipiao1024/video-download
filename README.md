@@ -270,7 +270,7 @@ Because `1080p` alone is not enough to decide the correct stream. For the same r
 
 ### What happens when the video has no subtitles
 
-This workflow depends on an existing English subtitle track. If YouTube does not provide one, local translation cannot start. The correct behavior is to report the missing subtitle source and move to a separate transcription process instead of pretending the normal CC translation flow still applies.
+This workflow depends on an existing English subtitle track. If YouTube does not provide one, local translation cannot start. The scripts now fail explicitly and tell the operator to move to a separate transcription workflow instead of pretending the normal CC translation flow still applies.
 
 ## Branch Naming
 

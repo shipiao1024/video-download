@@ -169,3 +169,4 @@ python C:\Users\Administrator\.codex\skills\video-download\scripts\mux_subtitles
 - Requesting many YouTube subtitle languages at once often triggers `HTTP Error 429`. Prefer `en-GB` first, then translate locally.
 - A downloaded YouTube `zh-Hans.vtt` is not the same artifact as local translation. Keep local translations named `.zh-Hans.local.srt`.
 - If a video has no subtitle track, do not promise YouTube-style translated CC output. Report that no source subtitle exists, then stop or ask whether the user wants an external transcription workflow instead.
+- The bundled subtitle scripts must fail explicitly on missing source subtitles and point to a separate transcription workflow.

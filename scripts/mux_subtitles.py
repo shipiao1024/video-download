@@ -5,8 +5,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from subtitle_workflow_messages import missing_subtitle_message
+
 
 ID_RE = re.compile(r"\[([^\]]+)\]")
+
+
+def _missing_subtitle_error(video_name: str, missing_kind: str) -> FileNotFoundError:
+    return FileNotFoundError(missing_subtitle_message(video_name, missing_kind))
 
 
 def parse_video_id(name: str) -> str:
@@ -33,9 +39,9 @@ def find_subtitles_for_video(video: Path) -> tuple[Path, Path]:
         elif candidate.name.endswith(".en-GB.srt"):
             en = candidate
     if zh is None:
-        raise FileNotFoundError(f"Missing zh-Hans.local subtitle for {video.name}")
+        raise _missing_subtitle_error(video.name, "zh-Hans.local")
     if en is None:
-        raise FileNotFoundError(f"Missing en-GB subtitle for {video.name}")
+        raise _missing_subtitle_error(video.name, "en-GB")
     return zh, en
 
 

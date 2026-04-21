@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 import argostranslate.translate
+from subtitle_workflow_messages import MISSING_SOURCE_SUBTITLE_MESSAGE
 
 
 TIMESTAMP_RE = re.compile(r"^\d\d:\d\d:\d\d,\d\d\d\s+-->\s+\d\d:\d\d:\d\d,\d\d\d")
@@ -57,7 +58,7 @@ def main():
 
     files = collect_srt_files(args.paths)
     if not files:
-        raise SystemExit("No .en-GB.srt files found.")
+        raise SystemExit(MISSING_SOURCE_SUBTITLE_MESSAGE)
 
     for src in files:
         dst = src.with_name(src.name.removesuffix(".en-GB.srt") + args.suffix)
