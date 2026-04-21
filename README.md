@@ -126,11 +126,10 @@ python -c "import argostranslate.translate as t; print(t.translate('test', 'en',
 - If `1080p` exists, use only `1080p`.
 - If `1080p` does not exist, use the best available stream at `720p` or higher.
 - Never silently default bitrate/compression preference in non-interactive or batch mode.
-- Ask the user to choose:
-  - `highest-bitrate`
-  - `efficient`
+- Require an explicit choice between `highest-bitrate` and `efficient`.
 - For subtitle workflows, prefer downloading `en-GB` first, then translate locally.
 - Avoid requesting many subtitle languages in one batch because YouTube often returns `HTTP 429`.
+- If the source video has no subtitle track, this workflow cannot fabricate YouTube-style translated CC. In that case, switch to a separate transcription workflow.
 
 ## End-to-End Example
 
@@ -227,6 +226,8 @@ The muxing workflow:
 - sets English as the secondary subtitle track
 - does not re-encode video or audio
 
+If the source video does not provide an English subtitle track, the translation and muxing flow cannot produce equivalent YouTube CC subtitles from nothing. That case needs a separate speech-to-text pipeline, which is outside this skill's default workflow.
+
 ## Bitrate Preference
 
 The same `1080p` label can point to very different streams. Resolution only tells you the pixel dimensions, not the compression level.
@@ -266,6 +267,10 @@ Yes. `scripts/mux_subtitles.py` creates a new `.mkv` file with soft subtitles. V
 ### Why no silent default for bitrate preference
 
 Because `1080p` alone is not enough to decide the correct stream. For the same resolution, users may want either better source quality or smaller output size. The workflow must ask or require an explicit flag.
+
+### What happens when the video has no subtitles
+
+This workflow depends on an existing English subtitle track. If YouTube does not provide one, local translation cannot start. The correct behavior is to report the missing subtitle source and move to a separate transcription process instead of pretending the normal CC translation flow still applies.
 
 ## Branch Naming
 

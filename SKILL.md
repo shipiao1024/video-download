@@ -31,13 +31,15 @@ Use Windows PowerShell. Install and verify these dependencies before running the
      ```
    - If it is not on `PATH`, download a Windows static build, unzip it, and pass the `bin` folder or `ffmpeg.exe` explicitly:
      ```powershell
-     curl.exe -L "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -o "TOOLS_DIR\ffmpeg-release-essentials.zip"
-     Expand-Archive -LiteralPath "TOOLS_DIR\ffmpeg-release-essentials.zip" -DestinationPath "TOOLS_DIR\ffmpeg" -Force
+     $toolsDir = "C:\tools"
+     New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
+     curl.exe -L "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -o "$toolsDir\ffmpeg-release-essentials.zip"
+     Expand-Archive -LiteralPath "$toolsDir\ffmpeg-release-essentials.zip" -DestinationPath "$toolsDir\ffmpeg" -Force
      ```
      Then use:
      ```powershell
-     --ffmpeg-location "TOOLS_DIR\ffmpeg\ffmpeg-<version>-essentials_build\bin"
-     --ffmpeg "TOOLS_DIR\ffmpeg\ffmpeg-<version>-essentials_build\bin\ffmpeg.exe"
+     --ffmpeg-location "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin"
+     --ffmpeg "C:\tools\ffmpeg\ffmpeg-<version>-essentials_build\bin\ffmpeg.exe"
      ```
 4. Local subtitle translation with Argos Translate:
    ```powershell
@@ -51,6 +53,18 @@ Use Windows PowerShell. Install and verify these dependencies before running the
 5. Optional YouTube extraction improvements:
    - `yt-dlp` may warn that no JavaScript runtime is available. This can reduce available formats for some videos. Install a supported runtime only if extraction starts failing or formats are missing.
    - `yt-dlp` may warn about missing impersonation dependencies. Install them only if YouTube requests fail because impersonation is required.
+
+## Output Contract
+
+When the workflow finishes, report these items clearly:
+
+- selected video resolution, codec, FPS, and bitrate preference
+- selected audio format
+- final container format
+- output directory
+- whether subtitles were downloaded
+- whether local Chinese translation was generated
+- whether `with-subs\*.mkv` was created
 
 ## Workflow
 
@@ -154,3 +168,4 @@ python C:\Users\Administrator\.codex\skills\video-download\scripts\mux_subtitles
 - Missing `ffmpeg` causes separate streams to remain unmerged or fail to merge.
 - Requesting many YouTube subtitle languages at once often triggers `HTTP Error 429`. Prefer `en-GB` first, then translate locally.
 - A downloaded YouTube `zh-Hans.vtt` is not the same artifact as local translation. Keep local translations named `.zh-Hans.local.srt`.
+- If a video has no subtitle track, do not promise YouTube-style translated CC output. Report that no source subtitle exists, then stop or ask whether the user wants an external transcription workflow instead.
